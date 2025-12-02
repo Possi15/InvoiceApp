@@ -5,6 +5,24 @@ from ai_engine import analyze_image
 
 ## Seite Konfigurieren
 st.set_page_config(page_title="AI-Scanner", page_icon="🧾", layout="wide")
+
+## CSS Hack für bessere Ansicht ##
+hide_streamlit_style = """
+            <style>
+            #MainMenu {visibility: hidden;}
+            footer {visibility: hidden;}
+            header {visibility: hidden;}
+            </style>"""
+st.markdown(hide_streamlit_style, unsafe_allow_html=True)
+
+## Verschlüsselung ##
+passwort = st.sidebar.text_input("Bitte gib das Passwort ein!", type="password")
+
+if passwort != "Secret!2025!":
+    st.title("Geschützter Bereich")
+    st.info("Gib das Passwort ein, damit du das Tool benutzen kannst!")
+    st.stop()
+
 st.title("Moderne Buchhaltung")
 st.markdown("Lade deine Bilder & PDF's hier hoch für eine Auswertung")
 
