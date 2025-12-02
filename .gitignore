@@ -1,0 +1,10 @@
+# Virtuelle Umgebung ignorieren
+.venv/
+venv/
+
+# Geheimnisse ignorieren (WICHTIG!)
+.env
+
+# System-Müll ignorieren
+__pycache__/
+.DS_Store
