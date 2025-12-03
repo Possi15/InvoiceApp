@@ -15,13 +15,37 @@ hide_streamlit_style = """
             </style>"""
 st.markdown(hide_streamlit_style, unsafe_allow_html=True)
 
-## Verschlüsselung ##
-passwort = st.sidebar.text_input("Bitte gib das Passwort ein!", type="password")
 
-if passwort != "Secret!2025!":
-    st.title("Geschützter Bereich")
-    st.info("Gib das Passwort ein, damit du das Tool benutzen kannst!")
+#############################################
+## Verschlüsselung mit Session recognizing ##
+#############################################
+
+## Kennen wir den User ? ##
+## Kennen wir den User ? ##
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+
+if not st.session_state.logged_in:
+    st.header("Anmeldung erforderlich!")
+    st.info("Bitte Passwort eingeben")
+    
+    # KORREKTUR: Runde Klammern () statt eckige []
+    password = st.text_input("Passwort", type="password")
+
+    if st.button("Anmelden"):
+        if password == "Secret!2025!": 
+            st.session_state.logged_in = True
+            st.rerun()
+        else:
+            st.error("❌ Falsches Passwort!")
+
     st.stop()
+##################################
+        ##### APP CODE #####
+##################################
+if st.sidebar.button("Logout🔒"):
+    st.session_state.logged_in=False
+    st.rerun()
 
 st.title("Moderne Buchhaltung")
 st.markdown("Lade deine Bilder & PDF's hier hoch für eine Auswertung")
@@ -80,7 +104,7 @@ if start_btn and uploaded_files:
     ################
 
     with col_result:
-        st.subheader("Ergbnisse")
+        st.subheader("Ergebnisse")
 
         if results_list:
             df = pd.DataFrame(results_list)
