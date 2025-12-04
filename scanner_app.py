@@ -117,10 +117,10 @@ if start_btn and uploaded_files:
             if "betrag_gesamt" in df.columns:
                  df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
 
-            # --- DAS HIER MUSS NEU DAZU: ---
-            # Wir zwingen die Datums-Spalte in ein echtes Zeit-Format
+            ## Zeit Format anpassen ##
             if "datum" in df.columns:
                 df["datum"] = pd.to_datetime(df["datum"], errors='coerce')
+                df["datum"] = df["datum"].dt.date
 
             edited_df = st.data_editor(
                 df,
