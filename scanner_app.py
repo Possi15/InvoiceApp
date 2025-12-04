@@ -28,30 +28,24 @@ def inject_custom_css():
             color: var(--text-highlight);
         }
 
-        /* --- DARK MODE UPLOADER FIX (Das Wichtigste!) --- */
-        /* Den weißen Hintergrund entfernen und Text weiß machen */
-        [data-testid='stFileUploader'] {
-            width: 100%;
-        }
+        /* --- DARK MODE UPLOADER FIX --- */
+        [data-testid='stFileUploader'] { width: 100%; }
         [data-testid='stFileUploader'] section {
-            background-color: #172a45 !important; /* Dunkler Hintergrund */
-            border: 2px dashed var(--blue-neon) !important; /* Neon Rahmen */
+            background-color: #172a45 !important;
+            border: 2px dashed var(--blue-neon) !important;
             border-radius: 10px;
             padding: 20px;
         }
-        /* Den "Browse Files" Button stylen */
         [data-testid='stFileUploader'] button {
             background-color: transparent !important;
             color: var(--cyan) !important;
             border: 1px solid var(--cyan) !important;
         }
-        /* Die Texte "Drag and Drop" etc. weiß machen */
         [data-testid='stFileUploader'] span, 
         [data-testid='stFileUploader'] div,
         [data-testid='stFileUploader'] small {
             color: var(--text-muted) !important;
         }
-        /* Entfernt das weiße Icon falls vorhanden und färbt es */
         [data-testid='stFileUploader'] svg {
             fill: var(--blue-neon) !important;
         }
@@ -64,7 +58,7 @@ def inject_custom_css():
             padding: 15px 20px;
             border-radius: 10px 10px 0 0;
             border-bottom: 1px solid #233554;
-            margin-bottom: 20px;
+            margin-bottom: 0px; /* Kein Margin nach unten, damit Content direkt anschließt */
         }
         .step-number {
             background: var(--blue-neon);
@@ -83,7 +77,23 @@ def inject_custom_css():
             letter-spacing: 0.5px;
         }
 
-        /* --- ANIMATION: RADAR SCANNER --- */
+        /* --- CONTAINER STYLING (FIX FÜR MOBILE) --- */
+        .main-card {
+            background-color: #0f1c30;
+            border: 1px solid #233554;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
+            /* WICHTIG: overflow visible lassen oder auto, damit Tabelle scrollen kann */
+            overflow: visible; 
+        }
+        .card-content {
+            padding: 20px;
+            /* Ermöglicht Scrollen innerhalb der Karte auf Mobile */
+            overflow-x: auto; 
+        }
+
+        /* --- ANIMATIONEN --- */
         @keyframes scan {
             0% { top: 0%; opacity: 0; }
             10% { opacity: 1; }
@@ -123,7 +133,6 @@ def inject_custom_css():
             letter-spacing: 2px;
         }
 
-        /* --- ANIMATION: SUCCESS --- */
         @keyframes pulse-green {
             0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7); }
             70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(100, 255, 218, 0); }
@@ -141,12 +150,11 @@ def inject_custom_css():
 
         /* --- BUTTONS --- */
         div.stButton > button {
-            width: 100%; /* Volle Breite */
+            width: 100%;
             border-radius: 8px;
             padding: 0.75rem 1rem;
             font-size: 1.1rem;
         }
-        /* Primary Button Style */
         div.stButton > button[kind="primary"] {
             background: linear-gradient(45deg, #00d2ff, #007bff);
             border: none;
@@ -160,19 +168,10 @@ def inject_custom_css():
             transform: scale(1.02);
             box-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
         }
-
-        /* --- CONTAINER STYLING --- */
-        .main-card {
-            background-color: #0f1c30; /* Sehr dunkles Blau */
-            border: 1px solid #233554;
-            border-radius: 15px;
-            padding: 0; /* Padding innen entfernen für Header */
-            margin-bottom: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            overflow: hidden;
-        }
-        .card-content {
-            padding: 25px;
+        
+        /* CSS Fix für Tabellen Overflow */
+        div[data-testid="stDataEditor"] {
+            overflow-x: auto;
         }
         </style>
     """, unsafe_allow_html=True)
@@ -180,7 +179,7 @@ def inject_custom_css():
 inject_custom_css()
 
 # ==========================================
-# 2. LOGIN (Kurzfassung)
+# 2. LOGIN LOGIK
 # ==========================================
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
@@ -196,11 +195,11 @@ if not st.session_state.authenticated:
                 st.session_state.authenticated = True
                 st.rerun()
             else:
-                st.error("Falsch.")
+                st.error("Falsches Passwort.")
     st.stop()
 
 # ==========================================
-# 3. HEADER & TITLE
+# 3. HEADER & LAYOUT
 # ==========================================
 st.markdown("""
     <div style='text-align: center; padding: 20px 0 40px 0;'>
@@ -217,7 +216,6 @@ col_left, col_right = st.columns([1, 1.5], gap="large")
 # LINKS: UPLOAD & ANALYSE
 # ==========================================
 with col_left:
-    # START CARD HTML
     st.markdown("""
         <div class='main-card'>
             <div class='step-header'>
@@ -227,50 +225,38 @@ with col_left:
             <div class='card-content'>
     """, unsafe_allow_html=True)
 
-    # --- UPLOADER ---
-    # Der CSS Fix oben macht diesen Bereich jetzt dunkel
     uploaded_files = st.file_uploader(
         "Dateien hier ablegen",
-        type=["jpg", "png", "pdf"],
+        type=["jpg", "png", "pdf", "jpeg"],
         accept_multiple_files=True,
         label_visibility="collapsed" 
     )
 
-    # --- LOGIC VARIABLES ---
     start_btn = False
-    
-    # Abstand
     st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
 
-    # --- BUTTON LOGIC ---
     if uploaded_files:
-        # Großer sichtbarer Button
         start_btn = st.button(f"⚡ {len(uploaded_files)} DATEIEN ANALYSIEREN", type="primary")
     else:
-        # Platzhalter Text wenn leer
         st.markdown("""
             <div style='text-align: center; color: #495670; padding: 20px; border: 1px dashed #233554; border-radius: 8px;'>
                 <i>Bitte Dateien oben auswählen</i>
             </div>
         """, unsafe_allow_html=True)
 
-    # --- ANIMATION AREA ---
     animation_placeholder = st.empty()
-    
-    # END CARD HTML
     st.markdown("</div></div>", unsafe_allow_html=True)
 
 
 # ==========================================
-# VERARBEITUNG & ANIMATION
+# VERARBEITUNG & LOGIK (FIX 2: Error Handling)
 # ==========================================
 results_list = []
 processing_done = False
 
 if start_btn and uploaded_files:
     
-    # 1. ANIMATION: SCANNING STARTET
-    # Wir zeigen den Scanner im Placeholder an
+    # Animations-Start
     animation_placeholder.markdown("""
         <div class='scanner-box'>
             <div class='scanner-line'></div>
@@ -278,30 +264,56 @@ if start_btn and uploaded_files:
         </div>
     """, unsafe_allow_html=True)
     
-    # Progress Bar (Optional, für Details)
     progress_bar = st.progress(0)
     
     for index, file in enumerate(uploaded_files):
-        # AI Aufruf simulieren (oder echt machen)
+        # AI Aufruf
         try:
             data = analyze_image(file)
+            
             if data:
+                # ERFOLG
                 data["Datei-Name"] = file.name
                 results_list.append(data)
+            else:
+                # FEHLER BEHANDLUNG (Fix 2)
+                # Wir fügen einen leeren Eintrag hinzu, damit die Datei in der Tabelle erscheint
+                error_entry = {
+                    "Datei-Name": file.name,
+                    "lieferant": "❌ FEHLER",
+                    "beschreibung": "Konnte nicht gelesen werden (Bild unscharf?)",
+                    "betrag_gesamt": 0.00,
+                    "datum": None,
+                    "kategorie": "Sonstiges",
+                    "rechnungsnummer": "N/A"
+                }
+                results_list.append(error_entry)
+                # Toast nur als Zusatzinfo
+                st.toast(f"Fehler bei {file.name}", icon="⚠️")
+                
         except Exception as e:
-            st.error(f"Fehler: {e}")
+            # SYSTEM FEHLER (Absturz der AI Funktion)
+            error_entry = {
+                "Datei-Name": file.name,
+                "lieferant": "❌ SYSTEM-ERROR",
+                "beschreibung": str(e),
+                "betrag_gesamt": 0.00,
+                "kategorie": "Sonstiges"
+            }
+            results_list.append(error_entry)
+            st.error(f"Kritischer Fehler bei {file.name}: {e}")
         
-        # Kleiner Sleep für den Effekt (Scanner wirkt besser)
+        # UI Delay für Scanner-Effekt
         time.sleep(0.8) 
         progress_bar.progress((index + 1) / len(uploaded_files))
 
     progress_bar.empty()
     
-    # 2. ANIMATION: SUCCESS
+    # Success Message
     animation_placeholder.markdown("""
         <div class='success-box'>
             <h2 style='color: #64ffda; margin:0;'>✅ FERTIG!</h2>
-            <p style='margin:0;'>Daten erfolgreich extrahiert.</p>
+            <p style='margin:0;'>Verarbeitung abgeschlossen.</p>
         </div>
     """, unsafe_allow_html=True)
     
@@ -312,7 +324,6 @@ if start_btn and uploaded_files:
 # RECHTS: ERGEBNISSE
 # ==========================================
 with col_right:
-    # START CARD HTML
     st.markdown("""
         <div class='main-card'>
             <div class='step-header'>
@@ -322,10 +333,12 @@ with col_right:
             <div class='card-content'>
     """, unsafe_allow_html=True)
 
+    # Wir prüfen processing_done ODER results_list. 
+    # Durch Fix 2 ist results_list fast nie leer, wenn uploaded_files existieren.
     if processing_done and results_list:
         df = pd.DataFrame(results_list)
         
-        # Spalten aufräumen
+        # Spalten-Logik
         cols = ["Datei-Name", "datum", "lieferant", "beschreibung", "betrag_gesamt", "kategorie"]
         final_cols = [c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols]
         df = df[final_cols]
@@ -333,16 +346,19 @@ with col_right:
         if "betrag_gesamt" in df.columns:
             df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
 
-        # Editor
-        st.info("💡 Du kannst die Tabelle direkt bearbeiten:")
+        st.info("💡 Du kannst die Tabelle direkt bearbeiten. Fehlerhafte Dateien sind markiert.")
+        
+        # DATA EDITOR
         edited_df = st.data_editor(
             df,
             use_container_width=True,
             num_rows="dynamic",
             height=450,
             column_config={
-                "betrag_gesamt": st.column_config.NumberColumn("Betrag", format="%.2f €"),
+                "betrag_gesamt": st.column_config.NumberColumn("Betrag (€)", format="%.2f €"),
                 "beschreibung": st.column_config.TextColumn("Inhalt", width="medium"),
+                "lieferant": st.column_config.TextColumn("Lieferant", width="medium"),
+                "datum": st.column_config.DateColumn("Datum", format="YYYY-MM-DD")
             },
             key="final_editor"
         )
@@ -350,17 +366,20 @@ with col_right:
         # Summe
         total = edited_df["betrag_gesamt"].sum() if "betrag_gesamt" in edited_df.columns else 0
         
-        # Abschlussleiste
         st.markdown("---")
         c_sum, c_btn = st.columns([1, 1])
         with c_sum:
             st.markdown(f"<div style='font-size:1.8rem; font-weight:bold; color:#64ffda;'>Summe: {total:.2f} €</div>", unsafe_allow_html=True)
         with c_btn:
             csv = edited_df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 CSV Exportieren", data=csv, file_name="export.csv", mime="text/csv", type="primary")
+            st.download_button("📥 CSV Exportieren", data=csv, file_name="export.csv", mime="text/csv", type="primary", use_container_width=True)
 
+    elif processing_done and not results_list:
+        # Falls es wirklich keine Daten gibt (sehr unwahrscheinlich durch Fix 2, aber zur Sicherheit)
+        st.error("Es konnten keine Daten extrahiert werden.")
+        
     else:
-        # LEERZUSTAND
+        # LEERZUSTAND (Warten auf Start)
         st.markdown("""
             <div style='height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5;'>
                 <div style='font-size: 5rem;'>📊</div>
@@ -368,5 +387,4 @@ with col_right:
             </div>
         """, unsafe_allow_html=True)
 
-    # END CARD HTML
     st.markdown("</div></div>", unsafe_allow_html=True)
