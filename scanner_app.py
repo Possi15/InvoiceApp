@@ -29,7 +29,6 @@ if not st.session_state.logged_in:
     st.header("Anmeldung erforderlich!")
     st.info("Bitte Passwort eingeben")
     
-    # KORREKTUR: Runde Klammern () statt eckige []
     password = st.text_input("Passwort", type="password")
 
     if st.button("Anmelden"):
@@ -110,21 +109,37 @@ if start_btn and uploaded_files:
             df = pd.DataFrame(results_list)
 
             ## Spalten Logik ##
-            cols = ["Datei-Name", "datum", "lieferant", "betrag_gesamt", "rechnungsnummer"]
+            cols = ["Datei-Name", "datum", "lieferant", "betrag_gesamt", "rechnungsnummer", "beschreibung"]
             final_cols = [c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols]
             df = df[final_cols]
 
-            ## Tabelle & Metriken
-            st.dataframe(df, use_container_width=True)
-
-            if "betrag_gesamt" in df.columns:
-                total = pd.to_numeric(df["betrag_gesamt"], errors='coerce').sum()
-                st.metric("Gesamtvolumen", f"{total:.2f} €")
-
+            edited_df = st.data_editor(
+                df,
+                use_container_width=True,
+                num_rows="dynamic",
+                column_config={
+                    "betrag_gesamt": st.column_config.NumberColumn("Betrag (€)", format="%.2f €"),
+                    "datum": st.column_config.DateColumn("Datum"),
+                    "beschreibung": st.column_config.TextColumn("Inhalt (Was?)", width="large"), 
+                    "lieferant": st.column_config.TextColumn("Lieferant"),
+                },
+                key="editor_main_v2"
+            )
+            if "betrag_gesamt" in edited_df.columns:
+                total = pd.to_numeric(edited_df["betrag_gesamt"], errors='coerce').sum()
+                st.metric("Gesamtvolumen (Live)", f"{total:.2f} €")
+            
             ## Export ##
             st.divider()
-            csv = df.to_csv(index=False).encode('utf-8')
-            st.download_button("CSV-Export", csv, "export.csv", "text/csv")
+            csv = edited_df.to_csv(index=False).encode('utf-8')
+            
+            st.download_button(
+                label="💾 Fertige Liste speichern", 
+                data=csv, 
+                file_name="export.csv", 
+                mime="text/csv",
+                type="primary"
+            )
 
         else:
             st.warning("Keine Daten extrahiert")

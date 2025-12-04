@@ -38,6 +38,7 @@ def analyze_image(image_path):
         - betrag (als Zahl, Punkt als Dezimaltrenner)
         - lieferant (Firmenname)
         - kategorie (Vorschlag: Supermarkt, Versicherung, Tech, Sonstiges)
+        - beschreibung (WICHTIG: Eine extrem kurze Zusammenfassung des Inhalts in max 6 Wörtern. Bsp: "2x Monitor & Maus" oder "Zugfahrt Berlin-München")
         """
 
         response = model.generate_content([prompt, content_part])
