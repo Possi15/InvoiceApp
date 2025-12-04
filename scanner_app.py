@@ -113,6 +113,15 @@ if start_btn and uploaded_files:
             final_cols = [c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols]
             df = df[final_cols]
 
+            # Zahlen formatieren
+            if "betrag_gesamt" in df.columns:
+                 df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
+
+            # --- DAS HIER MUSS NEU DAZU: ---
+            # Wir zwingen die Datums-Spalte in ein echtes Zeit-Format
+            if "datum" in df.columns:
+                df["datum"] = pd.to_datetime(df["datum"], errors='coerce')
+
             edited_df = st.data_editor(
                 df,
                 use_container_width=True,
@@ -123,11 +132,9 @@ if start_btn and uploaded_files:
                     "beschreibung": st.column_config.TextColumn("Inhalt (Was?)", width="large"), 
                     "lieferant": st.column_config.TextColumn("Lieferant"),
                 },
-                key="editor_main_v2"
+                key="editor_main"
             )
-            if "betrag_gesamt" in edited_df.columns:
-                total = pd.to_numeric(edited_df["betrag_gesamt"], errors='coerce').sum()
-                st.metric("Gesamtvolumen (Live)", f"{total:.2f} €")
+            
             
             ## Export ##
             st.divider()
