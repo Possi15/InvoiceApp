@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import time
+# from PIL import Image
 from ai_engine import analyze_image
 
 # ==========================================
@@ -13,159 +14,135 @@ st.set_page_config(
     initial_sidebar_state="collapsed"
 )
 
-# Custom CSS für das "Deep Navy & Glow" Design
 def inject_custom_css():
     st.markdown("""
         <style>
-        /* --- GLOBAL VARIABLES --- */
+        /* --- FARBPALETTE --- */
         :root {
-            --bg-color: #0a192f;
+            --bg-dark: #0a192f;
             --card-bg: #112240;
-            --text-primary: #e6f1ff;
-            --text-secondary: #8892b0;
-            --accent-color: #64ffda; /* Teal/Cyan Akzent */
-            --accent-glow: rgba(100, 255, 218, 0.1);
-            --blue-bright: #00d2ff;
+            --text-main: #e6f1ff;
+            --text-muted: #8892b0;
+            --cyan: #64ffda;
+            --blue-neon: #00d2ff;
             --border-color: #233554;
         }
 
-        /* --- BACKGROUND & RESET --- */
+        /* --- GLOBAL SETUP --- */
         .stApp {
-            background-color: var(--bg-color);
-            color: var(--text-primary);
+            background-color: var(--bg-dark);
+            color: var(--text-main);
         }
         
-        /* Force Dark Scrollbars */
-        ::-webkit-scrollbar { width: 10px; background: var(--bg-color); }
-        ::-webkit-scrollbar-thumb { background: #233554; border-radius: 5px; }
-
-        /* --- GLOW EFFECTS (BACKGROUND) --- */
-        /* Wir nutzen Pseudo-Elemente auf dem Main Container für den Glow */
+        /* Hintergrund-Glow (Subtil) */
         .stApp::before {
-            content: "";
-            position: absolute;
-            top: -10%;
-            left: -10%;
-            width: 50%;
-            height: 50%;
-            background: radial-gradient(circle, rgba(0, 210, 255, 0.08), transparent 60%);
-            z-index: 0;
-            pointer-events: none;
-        }
-        .stApp::after {
-            content: "";
-            position: absolute;
-            bottom: -10%;
-            right: -10%;
-            width: 50%;
-            height: 50%;
-            background: radial-gradient(circle, rgba(100, 255, 218, 0.05), transparent 60%);
-            z-index: 0;
-            pointer-events: none;
+            content: ""; position: absolute; top: -10%; left: -10%; width: 60%; height: 60%;
+            background: radial-gradient(circle, rgba(0, 210, 255, 0.05), transparent 70%);
+            pointer-events: none; z-index: 0;
         }
 
-        /* --- TYPOGRAPHY --- */
-        h1, h2, h3 {
-            font-family: 'Inter', sans-serif;
-            font-weight: 700;
-            color: var(--text-primary) !important;
-            letter-spacing: -0.5px;
-        }
-        p, label, .stMarkdown {
-            color: var(--text-secondary) !important;
-            font-family: 'Inter', sans-serif;
-        }
+        /* --- TYPOGRAPHIE --- */
+        h1, h2, h3 { font-family: 'Inter', sans-serif; font-weight: 700; color: var(--text-main) !important; }
+        p, label, .stMarkdown { color: var(--text-muted); }
 
-        /* --- HEADER CLEANUP --- */
-        header[data-testid="stHeader"] {
-            background: transparent;
-        }
-        .block-container {
-            padding-top: 3rem;
-            padding-bottom: 5rem;
-        }
-
-        /* --- COMPONENT STYLING --- */
-        
-        /* Cards (Upload Box, Results) */
-        .css-card {
-            background-color: var(--card-bg);
-            border-radius: 12px;
-            padding: 20px;
-            border: 1px solid var(--border-color);
-            box-shadow: 0 10px 30px -10px rgba(2, 12, 27, 0.7);
-        }
-
-        /* File Uploader Customization */
-        section[data-testid="stFileUploader"] {
-            background-color: var(--card-bg);
-            border: 1px dashed var(--blue-bright);
-            border-radius: 10px;
-            padding: 20px;
-        }
-        section[data-testid="stFileUploader"] small {
-            color: var(--text-secondary);
-        }
-
-        /* Input Fields */
-        div[data-baseweb="input"] {
-            background-color: #172a45;
-            border: 1px solid var(--border-color);
-            border-radius: 4px;
-            color: white;
-        }
-        input.st-ai {
-            color: white !important;
-        }
-
-        /* Buttons */
+        /* --- BUTTON STYLING (NAVY FILL + HOVER) --- */
+        /* Basis Button */
         div.stButton > button {
-            background-color: transparent;
-            color: var(--blue-bright);
-            border: 1px solid var(--blue-bright);
-            border-radius: 4px;
-            padding: 0.5rem 1rem;
+            background-color: var(--bg-dark); /* Navy Füllung */
+            color: var(--blue-neon);
+            border: 1px solid var(--blue-neon);
+            border-radius: 6px;
+            padding: 0.6rem 1.2rem;
             font-weight: 600;
             transition: all 0.3s ease;
-        }
-        div.stButton > button:hover {
-            background-color: rgba(0, 210, 255, 0.1);
-            border-color: var(--blue-bright);
-            color: #ffffff;
-            box-shadow: 0 0 15px rgba(0, 210, 255, 0.3);
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
         }
         
-        /* Primary Button (Analyse Starten) */
+        /* Hover Effekt */
+        div.stButton > button:hover {
+            background-color: var(--blue-neon); /* Füllt sich hellblau */
+            color: var(--bg-dark); /* Text wird dunkel */
+            border-color: var(--blue-neon);
+            box-shadow: 0 0 15px rgba(0, 210, 255, 0.5); /* Glow */
+            transform: translateY(-2px);
+        }
+        
+        /* Primary Button (Start Analyse) - Extra Hervorhebung */
         div.stButton > button[kind="primary"] {
-            background: linear-gradient(90deg, #00d2ff 0%, #007bff 100%);
-            border: none;
-            color: #0a192f; /* Dark text on bright button */
-            font-weight: bold;
-            box-shadow: 0 4px 14px 0 rgba(0, 118, 255, 0.39);
+            background-color: var(--card-bg);
+            border: 2px solid var(--cyan);
+            color: var(--cyan);
         }
         div.stButton > button[kind="primary"]:hover {
-            box-shadow: 0 6px 20px rgba(0, 118, 255, 0.23);
-            transform: translateY(-1px);
-            color: #0a192f;
+            background-color: var(--cyan);
+            color: var(--bg-dark);
+            box-shadow: 0 0 20px rgba(100, 255, 218, 0.4);
         }
 
-        /* Data Editor / Dataframe fixes for dark mode */
-        div[data-testid="stDataEditor"] {
+        /* --- CARDS & UMRANDUNGEN (Die Schritte) --- */
+        /* Wir erstellen eine CSS-Klasse für die Container, die wir per Markdown injecten */
+        .step-card {
+            background-color: var(--card-bg);
             border: 1px solid var(--border-color);
-            border-radius: 8px;
-            overflow: hidden;
+            border-radius: 12px;
+            padding: 25px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px -15px rgba(2, 12, 27, 0.7);
+            height: 100%;
         }
         
-        /* Toast & Alerts */
-        div[data-baseweb="notification"] {
-            background-color: var(--card-bg);
-            border: 1px solid var(--blue-bright);
-            color: white;
+        /* Header innerhalb der Cards */
+        .card-header {
+            border-bottom: 1px solid var(--border-color);
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--text-main);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        /* Nummerierung (1, 2) Kreise */
+        .step-number {
+            background: var(--blue-neon);
+            color: var(--bg-dark);
+            width: 24px; height: 24px;
+            border-radius: 50%;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.8rem;
+            font-weight: 800;
         }
 
-        /* Dividers */
-        hr {
-            border-color: var(--border-color);
+        /* --- WORKFLOW VISUAL (Oben) --- */
+        .workflow-box {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 15px;
+            margin: 20px auto 50px auto;
+            padding: 15px;
+            background: rgba(17, 34, 64, 0.5);
+            border: 1px dashed var(--border-color);
+            border-radius: 50px;
+            width: fit-content;
+        }
+        .wf-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            color: var(--text-main);
+            font-weight: 500;
+        }
+        .wf-arrow { color: var(--text-muted); font-size: 1.2rem; }
+        .wf-icon { color: var(--cyan); font-size: 1.2rem; }
+
+        /* --- SONSTIGES --- */
+        div[data-testid="stFileUploader"] {
+            padding: 10px;
         }
         
         </style>
@@ -174,247 +151,216 @@ def inject_custom_css():
 inject_custom_css()
 
 # ==========================================
-# 2. SESSION STATE
+# 2. SESSION STATE & LOGIN
 # ==========================================
 
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
-# ==========================================
-# 3. LOGIN SCREEN (Neu gestaltet)
-# ==========================================
-
 if not st.session_state.authenticated:
-    # Spacer, um den Inhalt vertikal zu zentrieren (visuell)
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    
+    st.markdown("<br><br>", unsafe_allow_html=True)
     col_l, col_center, col_r = st.columns([1, 1, 1])
     
     with col_center:
+        # Login Card Design
         st.markdown("""
-            <div style='background-color: #112240; padding: 40px; border-radius: 15px; border: 1px solid #233554; text-align: center; box-shadow: 0 20px 50px rgba(0,0,0,0.5);'>
-                <h1 style='color: white; font-size: 2rem; margin-bottom: 10px;'>🔒 Secure Access</h1>
-                <p style='margin-bottom: 30px;'>Rechnungs-Manager AI System</p>
+            <div style='background-color: #112240; padding: 40px; border-radius: 12px; border: 1px solid #233554; text-align: center;'>
+                <h2 style='color: white; margin-bottom: 0;'>🔐 Secure Access</h2>
+                <p style='font-size: 0.9rem; margin-bottom: 20px;'>Rechnungs-Manager AI</p>
             </div>
         """, unsafe_allow_html=True)
         
-        # Eingabefelder direkt unterhalb des dekorativen Headers
-        password = st.text_input("Zugangscode", type="password", placeholder="••••••••")
-        
+        password = st.text_input("Zugangscode", type="password", label_visibility="collapsed", placeholder="Passwort eingeben...")
         st.markdown("<br>", unsafe_allow_html=True)
         
-        if st.button("System entsperren", type="primary", use_container_width=True):
+        if st.button("Anmelden", use_container_width=True):
             if password == "Start123":
                 st.session_state.authenticated = True
                 st.rerun()
             else:
-                st.error("❌ Zugriff verweigert.")
-
+                st.error("Zugriff verweigert.")
     st.stop()
 
 # ==========================================
-# 4. HAUPT-APPLIKATION (Eingeloggt)
+# 3. HAUPT-LAYOUT
 # ==========================================
 
-# Optional: Header-Leiste mit Logout
-c1, c2 = st.columns([8, 1])
+# Header & Logout
+c1, c2 = st.columns([10, 1])
 with c2:
-    if st.button("Logout 🔒", key="logout_btn"):
+    if st.button("Abmelden"):
         st.session_state.authenticated = False
         st.rerun()
 
-# --- HERO AREA ---
+# --- TITEL & VALUE PROPOSITION ---
 st.markdown("""
-    <div style='text-align: center; padding: 40px 0 60px 0;'>
-        <h1 style='font-size: 4rem; margin-bottom: 10px; background: -webkit-linear-gradient(white, #8892b0); -webkit-background-clip: text; -webkit-text-fill-color: transparent;'>
-            Rechnungs Fabrik AI
-        </h1>
-        <p style='font-size: 1.3rem; color: #8892b0; max-width: 600px; margin: 0 auto;'>
-            Automatisierte Belegerfassung, Klassifizierung und Export für Finanz-Profis.
-            <span style='color: #00d2ff;'>Powered by Neural Networks.</span>
-        </p>
+    <div style='text-align: center; margin-bottom: 10px;'>
+        <h1 style='font-size: 3.5rem; margin-bottom: 5px;'>Rechnungs Fabrik <span style='color: #00d2ff;'>AI</span></h1>
+        <p style='font-size: 1.2rem; color: #8892b0;'>Vom Papierchaos zur perfekten Buchhaltung in Sekunden.</p>
+    </div>
+    
+    <!-- WORKFLOW VISUALISIERUNG -->
+    <div class='workflow-box'>
+        <div class='wf-item'><span class='wf-icon'>📄</span> PDF/Bild Upload</div>
+        <div class='wf-arrow'>➔</div>
+        <div class='wf-item'><span class='wf-icon'>🧠</span> KI Extraktion</div>
+        <div class='wf-arrow'>➔</div>
+        <div class='wf-item'><span class='wf-icon'>📊</span> Fertige CSV/Tabelle</div>
     </div>
 """, unsafe_allow_html=True)
 
+# Layout Spalten
+col_left, col_right = st.columns([1, 2])
 
-# Layout: Split 30% / 70%
-col_input, col_spacer, col_result = st.columns([10, 1, 20])
-
-# --- LINKER BEREICH: UPLOAD ---
-with col_input:
-    st.markdown("<h3 style='border-bottom: 2px solid #00d2ff; padding-bottom: 10px; display: inline-block;'>1. Dateneingang</h3>", unsafe_allow_html=True)
-    st.markdown("<p style='font-size: 0.9rem; margin-bottom: 20px;'>Lade deine Belege (PDF, JPG, PNG) hier hoch. Die KI startet auf Knopfdruck.</p>", unsafe_allow_html=True)
-
-    # Container-Look für Upload
-    with st.container():
-        uploaded_files = st.file_uploader(
-            "Dateien auswählen",
-            type=["jpg", "png", "jpeg", "pdf"],
-            accept_multiple_files=True,
-            label_visibility="collapsed"
-        )
-
-    st.markdown("<br>", unsafe_allow_html=True)
+# ==========================================
+# LINKS: INPUT (STEP 1)
+# ==========================================
+with col_left:
+    # START CARD 1
+    st.markdown("""
+        <div class='step-card'>
+            <div class='card-header'>
+                <span class='step-number'>1</span> Dateneingang
+            </div>
+    """, unsafe_allow_html=True)
+    
+    st.caption("Lade hier deine Rechnungen hoch.")
+    
+    uploaded_files = st.file_uploader(
+        "Files",
+        type=["jpg", "png", "jpeg", "pdf"],
+        accept_multiple_files=True,
+        label_visibility="collapsed"
+    )
 
     start_btn = False
     
-    # Status Container für dynamische Meldungen
+    st.markdown("<br>", unsafe_allow_html=True)
+    
+    if uploaded_files:
+        st.info(f"{len(uploaded_files)} Dokumente bereit.")
+        # Der Primary Button hat jetzt unser Custom Design
+        start_btn = st.button("⚡ Analyse Starten", type="primary", use_container_width=True)
+    else:
+        st.markdown("<div style='text-align:center; padding: 20px; color: #495670; border: 1px dashed #233554; border-radius:8px;'>Warte auf Upload...</div>", unsafe_allow_html=True)
+
+    # Platzhalter für Status
+    st.markdown("<br>", unsafe_allow_html=True)
     status_box = st.empty()
     progress_bar = st.empty()
 
-    if uploaded_files:
-        st.markdown(f"""
-            <div style='background: rgba(0, 210, 255, 0.1); border-left: 4px solid #00d2ff; padding: 10px; border-radius: 4px; margin-bottom: 20px;'>
-                <strong style='color: #00d2ff;'>{len(uploaded_files)} Dateien</strong> bereit zur Analyse.
-            </div>
-        """, unsafe_allow_html=True)
-        
-        start_btn = st.button("🚀 Analyse Starten", type="primary", use_container_width=True)
-    else:
-        st.markdown("""
-            <div style='padding: 20px; border: 1px dashed #233554; border-radius: 8px; text-align: center; color: #8892b0;'>
-                <i>Keine Dateien gewählt</i>
-            </div>
-        """, unsafe_allow_html=True)
+    # END CARD 1
+    st.markdown("</div>", unsafe_allow_html=True)
 
 
-# --- LOGIK: VERARBEITUNG ---
+# ==========================================
+# LOGIK LOOP
+# ==========================================
 results_list = []
 processing_done = False
 
 if start_btn and uploaded_files:
-    
     progress_bar.progress(0)
-    
     for index, file in enumerate(uploaded_files):
-        # Visuelles Feedback
-        status_box.markdown(f"""
-            <div style='color: #00d2ff; font-weight: bold;'>
-                ⏳ Verarbeite: {file.name}...
-            </div>
-        """, unsafe_allow_html=True)
-
-        # AI ENGINE CALL
+        status_box.markdown(f"<span style='color:#00d2ff'>⏳ Analysiere: {file.name}...</span>", unsafe_allow_html=True)
+        
         try:
             data = analyze_image(file)
-            
             if data:
                 data["Datei-Name"] = file.name
                 results_list.append(data)
             else:
-                st.toast(f"Konnte Daten nicht extrahieren: {file.name}", icon="⚠️")
+                st.toast(f"Fehler bei {file.name}", icon="⚠️")
         except Exception as e:
-             st.error(f"Systemfehler bei {file.name}: {e}")
-
-        # Balken update
+            st.error(f"Error: {e}")
+            
         progress_bar.progress((index + 1) / len(uploaded_files))
-        time.sleep(0.1) # Kurzer visueller Delay für UX
+        time.sleep(0.1) # UI Feel
 
-    # Abschluss
-    status_box.markdown("""
-        <div style='color: #64ffda; font-weight: bold; padding: 10px; border: 1px solid #64ffda; border-radius: 5px; text-align: center;'>
-            ✅ Verarbeitung abgeschlossen!
-        </div>
-    """, unsafe_allow_html=True)
+    status_box.success("Fertig!")
     progress_bar.empty()
     processing_done = True
 
 
-# --- RECHTER BEREICH: ERGEBNISSE ---
-with col_result:
-    st.markdown("<h3 style='border-bottom: 2px solid #00d2ff; padding-bottom: 10px; display: inline-block;'>2. Prüfstand & Export</h3>", unsafe_allow_html=True)
-    
-    if processing_done and results_list:
-        # Datenvorbereitung
-        df = pd.DataFrame(results_list)
+# ==========================================
+# RECHTS: OUTPUT (STEP 2)
+# ==========================================
+with col_right:
+    # START CARD 2
+    st.markdown("""
+        <div class='step-card'>
+            <div class='card-header'>
+                <span class='step-number'>2</span> Ergebnis & Export
+            </div>
+    """, unsafe_allow_html=True)
 
-        # Spalten aufräumen
+    if processing_done and results_list:
+        # DataFrame Logic
+        df = pd.DataFrame(results_list)
         cols = ["Datei-Name", "datum", "lieferant", "beschreibung", "betrag_gesamt", "kategorie", "rechnungsnummer"]
         final_cols = [c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols]
         df = df[final_cols]
-
-        # Datentypen fixen
+        
+        # Cleanup Types
         if "betrag_gesamt" in df.columns:
              df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
-        
         if "datum" in df.columns:
-            df["datum"] = pd.to_datetime(df["datum"], errors='coerce')
-            df["datum"] = df["datum"].dt.date
+            df["datum"] = pd.to_datetime(df["datum"], errors='coerce').dt.date
 
-        # Layout für Metriken oben drüber
-        m1, m2 = st.columns(2)
-        total_sum = df["betrag_gesamt"].sum() if "betrag_gesamt" in df.columns else 0.0
+        # Metrik
+        total_val = df["betrag_gesamt"].sum() if "betrag_gesamt" in df.columns else 0.0
         
-        with m1:
-            st.metric("Erfasste Dokumente", len(results_list))
-        with m2:
-            st.metric("Vorläufige Summe", f"{total_sum:.2f} €")
+        m_col1, m_col2 = st.columns(2)
+        with m_col1:
+            st.markdown(f"<div style='font-size: 0.9rem; color: #8892b0;'>Dokumente</div><div style='font-size: 1.5rem; font-weight:bold; color: white;'>{len(results_list)}</div>", unsafe_allow_html=True)
+        with m_col2:
+            st.markdown(f"<div style='font-size: 0.9rem; color: #8892b0;'>Gesamtsumme</div><div style='font-size: 1.5rem; font-weight:bold; color: #64ffda;'>{total_val:.2f} €</div>", unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
-        st.info("💡 Interaktive Tabelle: Klicke in Zellen zum Bearbeiten.")
+        st.caption("✏️ Klicke in die Tabelle zum Korrigieren:")
 
-        # DATA EDITOR
         edited_df = st.data_editor(
             df,
             use_container_width=True,
             num_rows="dynamic",
-            height=500,
+            height=400,
             column_config={
-                "betrag_gesamt": st.column_config.NumberColumn(
-                    "Betrag (€)", 
-                    format="%.2f €",
-                    help="Brutto Gesamtbetrag"
-                ),
-                "datum": st.column_config.DateColumn(
-                    "Belegdatum", 
-                    format="YYYY-MM-DD"
-                ),
-                "beschreibung": st.column_config.TextColumn(
-                    "Inhalt (KI Summary)", 
-                    width="large"
-                ),
-                "lieferant": st.column_config.TextColumn("Lieferant"),
+                "betrag_gesamt": st.column_config.NumberColumn("Betrag (€)", format="%.2f €"),
+                "datum": st.column_config.DateColumn("Belegdatum", format="YYYY-MM-DD"),
+                "beschreibung": st.column_config.TextColumn("Inhalt", width="medium"),
                 "kategorie": st.column_config.SelectboxColumn(
                     "Kategorie",
                     options=["Bewirtung", "Reise", "Büro", "Software", "Hardware", "Marketing", "Sonstiges"],
                     required=True
                 )
             },
-            key="editor_main_modern"
+            key="editor_main_v4"
         )
-
-        # Live-Update der Summe nach Editierung
-        if "betrag_gesamt" in edited_df.columns:
-            new_total = pd.to_numeric(edited_df["betrag_gesamt"], errors='coerce').sum()
-            # Kleiner Trick: Metrik in Container anzeigen, um "Checked" Look zu geben
-            st.markdown(f"""
-                <div style='background: #112240; padding: 15px; border-radius: 8px; margin-top: 20px; display: flex; justify-content: space-between; align-items: center; border: 1px solid #233554;'>
-                    <span style='color: #8892b0;'>Geprüfte Gesamtsumme:</span>
-                    <span style='color: #64ffda; font-size: 1.5rem; font-weight: bold;'>{new_total:.2f} €</span>
-                </div>
-            """, unsafe_allow_html=True)
-
-        # EXPORT
+        
         st.markdown("---")
-        csv = edited_df.to_csv(index=False).encode('utf-8')
-
-        col_export_l, col_export_r = st.columns([3, 2])
-        with col_export_r:
+        
+        # Export Button (Rechtsbündig)
+        col_space, col_dl = st.columns([2, 1])
+        with col_dl:
+            csv = edited_df.to_csv(index=False).encode('utf-8')
             st.download_button(
-                label="💾 CSV Exportieren",
+                label="📥 CSV Herunterladen",
                 data=csv,
-                file_name="buchhaltung_export.csv",
+                file_name="export.csv",
                 mime="text/csv",
-                type="primary",
+                type="primary", # Nutzt unseren Custom Style
                 use_container_width=True
             )
 
-    elif not uploaded_files:
-        # Leerer State (Placeholder Design)
+    else:
+        # EMPTY STATE VISUAL
         st.markdown("""
-            <div style='height: 400px; display: flex; flex-direction: column; align-items: center; justify-content: center; border: 2px dashed #233554; border-radius: 12px; margin-top: 20px; color: #495670;'>
-                <div style='font-size: 3rem; margin-bottom: 10px; opacity: 0.5;'>📊</div>
-                <p>Warte auf Daten...</p>
-                <small>Bitte links Dateien hochladen und Analyse starten.</small>
+            <div style='display: flex; flex-direction: column; align-items: center; justify-content: center; height: 300px; color: #495670;'>
+                <div style='font-size: 4rem; margin-bottom: 20px; opacity: 0.3;'>📊</div>
+                <p>Noch keine Daten vorhanden.</p>
+                <small>Starte Schritt 1 um Ergebnisse zu sehen.</small>
             </div>
         """, unsafe_allow_html=True)
+
+    # END CARD 2
+    st.markdown("</div>", unsafe_allow_html=True)
