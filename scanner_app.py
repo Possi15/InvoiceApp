@@ -262,9 +262,27 @@ with col_right:
         if "betrag_gesamt" in df.columns:
             df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
 
+        # ... (dein vorhandener Code zum Filtern der Spalten)
+        df = df[cols_to_show]
+
+        # --- HIER IST DER FIX ---
+        
+        # 1. Betrag sicher in Zahlen umwandeln (Kommas durch Punkte ersetzen falls nötig)
+        if "betrag_gesamt" in df.columns:
+            # Falls Strings wie "12,50" kommen, erst Komma zu Punkt
+            df["betrag_gesamt"] = df["betrag_gesamt"].astype(str).str.replace(',', '.', regex=False)
+            df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
+
+        # 2. Datum sicher von String ("2023-11-24") in echtes Datumsobjekt umwandeln
+        if "datum" in df.columns:
+            df["datum"] = pd.to_datetime(df["datum"], errors='coerce').dt.date
+
+        # --- ENDE FIX ---
+
+        # DATA EDITOR (ab hier dein normaler Code weiter)
+        edited_df = st.data_editor(...)
+
         # DATA EDITOR
-        # Änderungen werden direkt im Session State (temporär über den Return des Editors) reflektiert
-        # für echte Persistenz müsste man on_change callbacks nutzen, aber für Export reicht das:
         edited_df = st.data_editor(
             df,
             use_container_width=True,
