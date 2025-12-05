@@ -4,212 +4,241 @@ import time
 from ai_engine import analyze_image
 
 # ==========================================
-# 1. KONFIGURATION & CSS
+# 1. SETUP & MINIMALISTISCHES DESIGN
 # ==========================================
 
 st.set_page_config(layout="wide", page_title="Universal Scanner", initial_sidebar_state="collapsed")
 
-def inject_custom_css():
+def inject_clean_css():
     st.markdown("""
         <style>
+        /* --- GRUNDLAGEN (Flat Dark Theme) --- */
         :root {
-            --bg-dark: #020c1b;
-            --text-highlight: #e6f1ff;
-            --cyan: #64ffda;
-            --blue-neon: #00d2ff;
-            --orange: #ffb86c;
-            --green: #50fa7b;
+            --bg-color: #0d1117; /* Sehr dunkles Grau (GitHub Style) */
+            --card-bg: #161b22;  /* Etwas helleres Grau für Karten */
+            --border-color: #30363d; /* Subtile Rahmen */
+            --accent-color: #2f81f7; /* Professionelles Blau */
+            --text-primary: #e6edf3;
+            --text-secondary: #8b949e;
         }
-        .stApp { background-color: var(--bg-dark); color: var(--text-highlight); }
+
+        .stApp {
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+        }
+
+        /* --- KARTEN DESIGN --- */
+        .simple-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 24px;
+            margin-bottom: 24px;
+        }
         
-        /* Uploader Styling */
+        /* --- TYPOGRAPHIE --- */
+        h1, h2, h3 { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif; letter-spacing: -0.5px; }
+        h1 { font-size: 2.2rem; font-weight: 600; }
+        .step-label { 
+            text-transform: uppercase; 
+            font-size: 0.75rem; 
+            font-weight: bold; 
+            color: var(--text-secondary); 
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        /* --- UPLOADER CLEANUP --- */
         [data-testid='stFileUploader'] section {
-            background-color: #172a45 !important;
-            border: 2px dashed var(--blue-neon) !important;
-            border-radius: 10px;
+            background-color: var(--bg-color);
+            border: 1px dashed var(--border-color);
+            border-radius: 6px;
         }
-        [data-testid='stFileUploader'] button { color: var(--cyan) !important; border-color: var(--cyan) !important; }
-        [data-testid='stFileUploader'] small, [data-testid='stFileUploader'] span { color: #8892b0 !important; }
+        [data-testid='stFileUploader'] small { display: none; } /* Versteckt "Limit 200MB..." */
 
-        /* Container & Header */
-        .main-card {
-            background-color: #0f1c30; border: 1px solid #233554;
-            border-radius: 15px; margin-bottom: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: visible;
-        }
-        .card-content { padding: 20px; overflow-x: auto; }
-        
-        .step-header {
-            display: flex; align-items: center; background: linear-gradient(90deg, #112240 0%, #172a45 100%);
-            padding: 15px 20px; border-radius: 10px 10px 0 0; border-bottom: 1px solid #233554;
-        }
-        .step-number {
-            background: var(--blue-neon); color: #020c1b; width: 30px; height: 30px;
-            border-radius: 50%; display: flex; align-items: center; justify-content: center;
-            font-weight: 800; margin-right: 15px;
-        }
-        .step-title { font-weight: 700; color: white; }
-
-        /* Kategorien */
-        .cat-header {
-            font-size: 1.2rem; font-weight: bold; margin-top: 20px; margin-bottom: 10px;
-            padding-bottom: 5px; border-bottom: 1px solid #233554;
-        }
-        .cat-open { color: var(--orange); }
-        .cat-done { color: var(--green); }
-        .cat-offer { color: var(--cyan); }
-
-        /* Buttons & Editor */
+        /* --- BUTTONS --- */
         div.stButton > button[kind="primary"] {
-            background: linear-gradient(45deg, #00d2ff, #007bff); border: none; color: white; font-weight: bold;
+            background-color: var(--accent-color);
+            border: none;
+            color: white;
+            font-weight: 500;
+            border-radius: 6px;
+            transition: opacity 0.2s;
         }
-        div[data-testid="stDataEditor"] { overflow-x: auto; }
+        div.stButton > button[kind="primary"]:hover {
+            opacity: 0.9;
+        }
+
+        /* --- TABELLEN --- */
+        div[data-testid="stDataEditor"] {
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+        
+        /* Kategorie Header */
+        .cat-header {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-top: 20px;
+            margin-bottom: 10px;
+            padding-bottom: 5px;
+            border-bottom: 1px solid var(--border-color);
+            color: var(--text-primary);
+        }
         </style>
     """, unsafe_allow_html=True)
 
-inject_custom_css()
+inject_clean_css()
 
 # ==========================================
-# 2. HELPER: SICHERE DATENTYPEN
+# 2. LOGIK-FUNKTIONEN (Bugfix & Typen)
 # ==========================================
 
 def clean_float(val):
-    """
-    Wandelt Input sicher in Float um.
-    WICHTIG: Gibt 0.0 zurück statt "-", damit der NumberColumn Editor nicht abstürzt.
-    """
-    if val is None: return 0.0
+    """Konvertiert alles sicher in Float (0.00 bei Fehler)"""
+    if val is None or val == "" or val == "-": 
+        return 0.0
     try:
-        if isinstance(val, (float, int)): return float(val)
-        # String bereinigen (1.000,00 € -> 1000.00)
+        if isinstance(val, (float, int)): 
+            return float(val)
+        # String Reinigung
         s = str(val).replace("€", "").replace("EUR", "").strip()
-        s = s.replace(".", "").replace(",", ".") # Deutsche Formatierung grob fixen
+        s = s.replace(".", "").replace(",", ".") 
         return float(s)
     except:
         return 0.0
 
 def auto_categorize(row):
-    text = " ".join([str(v).lower() for v in row.values()])
-    status = str(row.get("Zahlungsstatus", "")).lower()
+    """
+    BUGFIX: Wir greifen nicht mehr mit .values() zu (das war der Fehler),
+    sondern wandeln die Reihe explizit in Strings um.
+    """
+    try:
+        # Wir wandeln die ganze Zeile in einen langen String um für die Suche
+        full_text = " ".join(row.astype(str).tolist()).lower()
+        status = str(row.get("Zahlungsstatus", "")).lower()
+        
+        if "angebot" in full_text or "kostenvoranschlag" in full_text: 
+            return "Angebot"
+        if "bezahlt" in status or "beglichen" in status or "erledigt" in status: 
+            return "Erledigt"
+        return "Offene Zahlung"
+    except:
+        return "Offene Zahlung"
+
+# ==========================================
+# 3. LAYOUT & HEADER
+# ==========================================
+
+# Minimalistischer Header
+st.markdown("<h1>Universal Scanner</h1>", unsafe_allow_html=True)
+st.markdown("<p style='color:#8b949e; margin-top:-15px;'>KI-gestützte Belegerfassung</p>", unsafe_allow_html=True)
+st.markdown("<br>", unsafe_allow_html=True)
+
+col_input, col_output = st.columns([1, 2], gap="large")
+
+# ==========================================
+# 4. LINKER BEREICH (INPUT)
+# ==========================================
+with col_input:
+    st.markdown("<div class='simple-card'>", unsafe_allow_html=True)
+    st.markdown("<span class='step-label'>1. DATEIEN HOCHLADEN</span>", unsafe_allow_html=True)
     
-    if "angebot" in text or "kostenvoranschlag" in text: return "Angebot"
-    if "bezahlt" in status or "beglichen" in status or "erledigt" in status: return "Erledigt"
-    return "Offene Zahlung"
+    uploaded_files = st.file_uploader(
+        "Upload", 
+        accept_multiple_files=True, 
+        label_visibility="collapsed"
+    )
 
-# ==========================================
-# 3. HEADER (OHNE LOGIN)
-# ==========================================
-
-st.markdown("""
-    <div style='text-align: center; padding: 20px 0 40px 0;'>
-        <h1 style='font-size: 3.5rem; margin: 0;'>Universal <span style='color:#64ffda;'>Scanner</span></h1>
-        <p style='color: #8892b0;'>Login deaktiviert – Testmodus</p>
-    </div>
-""", unsafe_allow_html=True)
-
-col_left, col_right = st.columns([1, 1.8], gap="large")
-
-# ==========================================
-# 4. UPLOAD (LINKS)
-# ==========================================
-with col_left:
-    st.markdown("""
-        <div class='main-card'>
-            <div class='step-header'><div class='step-number'>1</div><div class='step-title'>Upload</div></div>
-            <div class='card-content'>
-    """, unsafe_allow_html=True)
-    
-    uploaded_files = st.file_uploader("Dateien", accept_multiple_files=True, label_visibility="collapsed")
-    
     start_btn = False
     if uploaded_files:
         st.markdown("<br>", unsafe_allow_html=True)
-        start_btn = st.button(f"⚡ SCAN STARTEN ({len(uploaded_files)})", type="primary")
+        # Schlichter Button
+        start_btn = st.button(f"Analyse starten ({len(uploaded_files)})", type="primary", use_container_width=True)
     
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
 
 # ==========================================
-# 5. VERARBEITUNG
+# 5. VERARBEITUNGSLOGIK
 # ==========================================
 results_list = []
 processing_done = False
 
 if start_btn and uploaded_files:
+    # Schlichte Progress Bar statt wilder Animation
     progress_bar = st.progress(0)
+    status_text = st.empty()
     
     for i, file in enumerate(uploaded_files):
+        status_text.caption(f"Verarbeite: {file.name}...")
+        
         try:
-            # AI ENGINE AUFRUF
+            # --- AI ENGINE ---
             raw = analyze_image(file)
-
             if raw is None: raw = {}
-            
-            # DATEN SICHERN (Hier verhindern wir den Absturz!)
+
+            # --- MAPPING & CLEANING ---
             entry = {
                 "Datei": file.name,
-                
-                # TEXTFELDER: Hier ist "-" erlaubt
+                # Textfelder: Dürfen "-" sein
                 "Lieferant": raw.get("lieferant", raw.get("firma", "-")) or "-",
                 "IBAN_Ziel": raw.get("iban", raw.get("zahlungsziel", "-")) or "-",
                 "Zahlungsstatus": raw.get("zahlungsstatus", raw.get("status", "-")) or "-",
-                "USt_Satz": raw.get("ust_satz", "-") or "-", 
+                "USt_Satz": raw.get("ust_satz", "-") or "-",
                 
-                # ZAHLENFELDER: Hier MUSS es eine Zahl sein (0.00), KEIN "-"
+                # Zahlenfelder: Müssen 0.0 sein (KEIN "-")
                 "Netto": clean_float(raw.get("netto", raw.get("nettobetrag"))),
                 "Steuer": clean_float(raw.get("steuer", raw.get("umsatzsteuerbetrag"))),
                 "Brutto": clean_float(raw.get("brutto", raw.get("bruttobetrag", raw.get("betrag_gesamt")))),
                 
-                # DATUMSFELD: Hier MUSS es ein Datum oder None sein, KEIN "-"
-                "Datum": raw.get("datum", raw.get("rechnungsdatum")), 
+                # Datum: Muss Datum oder None sein (KEIN "-")
+                "Datum": raw.get("datum", raw.get("rechnungsdatum")),
                 
                 "_error": False
             }
             results_list.append(entry)
-            
+
         except Exception as e:
-            # Fallback bei Crash
+            # Fehlerfall (sicher abfangen)
             results_list.append({
-                "Datei": file.name, "Lieferant": "❌ FEHLER", 
+                "Datei": file.name, "Lieferant": "⚠️ Fehler", 
                 "Netto": 0.0, "Steuer": 0.0, "Brutto": 0.0,
-                "Datum": None, "Zahlungsstatus": "Fehler", "_error": True
+                "Datum": None, "Zahlungsstatus": "Systemfehler", "_error": True
             })
-        
+            print(f"Error processing {file.name}: {e}") # Log für Konsole
+
+        # Update Progress
         progress_bar.progress((i + 1) / len(uploaded_files))
-        time.sleep(0.1)
 
     progress_bar.empty()
+    status_text.empty()
     processing_done = True
 
 # ==========================================
-# 6. AUSGABE (RECHTS)
+# 6. RECHTER BEREICH (OUTPUT)
 # ==========================================
-with col_right:
-    st.markdown("""
-        <div class='main-card'>
-            <div class='step-header'><div class='step-number'>2</div><div class='step-title'>Ergebnis</div></div>
-            <div class='card-content'>
-    """, unsafe_allow_html=True)
+with col_output:
+    st.markdown("<div class='simple-card'>", unsafe_allow_html=True)
+    st.markdown("<span class='step-label'>2. ERGEBNIS & EXPORT</span>", unsafe_allow_html=True)
 
     if processing_done and results_list:
         df = pd.DataFrame(results_list)
-        
-        # --- TYP-ERZWINGUNG (Verhindert Absturz) ---
-        
-        # 1. Datum zu echtem Datetime (Fehlerhafte werden zu NaT/Leer)
+
+        # --- PANDAS TYPEN FIXEN (Verhindert Editor-Absturz) ---
         if "Datum" in df.columns:
             df["Datum"] = pd.to_datetime(df["Datum"], errors='coerce')
+        
+        for col in ["Netto", "Steuer", "Brutto"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors='coerce').fillna(0.0)
 
-        # 2. Zahlen sicherstellen
-        cols_num = ["Netto", "Steuer", "Brutto"]
-        for c in cols_num:
-            if c in df.columns:
-                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
-
-        # 3. Kategorisierung
+        # --- KATEGORISIERUNG (BUGFIXED VERSION) ---
         df["Kategorie"] = df.apply(auto_categorize, axis=1)
         df.loc[df["_error"]==True, "Kategorie"] = "Offene Zahlung"
 
-        # SPALTEN KONFIGURATION
+        # --- TABELLEN KONFIGURATION ---
         col_config = {
             "Lieferant": st.column_config.TextColumn("Lieferant", width="medium"),
             "Datum": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
@@ -217,14 +246,14 @@ with col_right:
             "Netto": st.column_config.NumberColumn("Netto", format="%.2f €"),
             "Steuer": st.column_config.NumberColumn("Steuer", format="%.2f €"),
             "Brutto": st.column_config.NumberColumn("Brutto", format="%.2f €"),
-            "IBAN_Ziel": st.column_config.TextColumn("IBAN / Info", width="medium"),
+            "IBAN_Ziel": st.column_config.TextColumn("Info", width="small"),
             "Zahlungsstatus": st.column_config.SelectboxColumn("Status", options=["Offen", "Bezahlt", "Storniert", "-"], width="small"),
-            "Datei": st.column_config.TextColumn("Datei", disabled=True),
+            "Datei": st.column_config.TextColumn("Quelle", disabled=True),
             "Kategorie": st.column_config.Column(hidden=True),
             "_error": st.column_config.Column(hidden=True)
         }
 
-        # GRUPPIERTE AUSGABE
+        # --- GRUPPIERTE ANZEIGE ---
         groups = ["Offene Zahlung", "Angebot", "Erledigt"]
         has_data = False
 
@@ -233,13 +262,8 @@ with col_right:
             if not sub_df.empty:
                 has_data = True
                 
-                # Icon wählen
-                icon = "📝"
-                css = "cat-open"
-                if group == "Angebot": icon, css = "📑", "cat-offer"
-                if group == "Erledigt": icon, css = "✅", "cat-done"
-                
-                st.markdown(f"<div class='cat-header {css}'>{icon} {group}</div>", unsafe_allow_html=True)
+                # Schlichter Header
+                st.markdown(f"<div class='cat-header'>{group}</div>", unsafe_allow_html=True)
                 
                 st.data_editor(
                     sub_df,
@@ -247,22 +271,22 @@ with col_right:
                     use_container_width=True,
                     num_rows="dynamic",
                     hide_index=True,
-                    key=f"editor_group_{group}" 
+                    key=f"editor_{group}"
                 )
 
         if not has_data:
-            st.warning("Keine Daten.")
-        
-        # EXPORT
+            st.info("Keine Daten gefunden.")
+
+        # --- EXPORT ---
         st.markdown("---")
         total = df["Brutto"].sum()
-        c1, c2 = st.columns([1,1])
-        c1.markdown(f"**Gesamt:** :green[{total:.2f} €]")
-        c2.download_button("💾 CSV Export", df.to_csv(index=False).encode("utf-8"), "export.csv", "text/csv", type="primary")
+        c1, c2 = st.columns([1, 1])
+        c1.markdown(f"**Gesamtsumme:** {total:.2f} €")
+        c2.download_button("CSV Exportieren", df.to_csv(index=False).encode("utf-8"), "export.csv", "text/csv", type="primary", use_container_width=True)
 
     elif processing_done:
-        st.error("Fehler: Keine Daten extrahiert.")
+        st.error("Konnte keine Daten aus den Bildern lesen.")
     else:
-        st.info("Warte auf Upload...")
+        st.markdown("<p style='color:#8b949e; font-style:italic;'>Bitte Dateien hochladen und Analyse starten.</p>", unsafe_allow_html=True)
 
-    st.markdown("</div></div>", unsafe_allow_html=True)
+    st.markdown("</div>", unsafe_allow_html=True)
