@@ -4,387 +4,282 @@ import time
 from ai_engine import analyze_image
 
 # ==========================================
-# 1. KONFIGURATION & CSS SYSTEM
+# 1. KONFIGURATION & CSS
 # ==========================================
 
-st.set_page_config(layout="wide", page_title="Rechnungs-Manager AI", initial_sidebar_state="collapsed")
+st.set_page_config(layout="wide", page_title="Universal Scanner", initial_sidebar_state="collapsed")
 
 def inject_custom_css():
     st.markdown("""
         <style>
-        /* --- FARBPALETTE & VARIABLES --- */
         :root {
             --bg-dark: #020c1b;
-            --card-bg: #112240;
             --text-highlight: #e6f1ff;
-            --text-muted: #8892b0;
             --cyan: #64ffda;
             --blue-neon: #00d2ff;
+            --orange: #ffb86c;
+            --green: #50fa7b;
         }
-
-        /* --- GLOBAL RESET --- */
-        .stApp {
-            background-color: var(--bg-dark);
-            color: var(--text-highlight);
-        }
-
-        /* --- DARK MODE UPLOADER FIX --- */
-        [data-testid='stFileUploader'] { width: 100%; }
+        .stApp { background-color: var(--bg-dark); color: var(--text-highlight); }
+        
+        /* Uploader Styling */
         [data-testid='stFileUploader'] section {
             background-color: #172a45 !important;
             border: 2px dashed var(--blue-neon) !important;
             border-radius: 10px;
-            padding: 20px;
         }
-        [data-testid='stFileUploader'] button {
-            background-color: transparent !important;
-            color: var(--cyan) !important;
-            border: 1px solid var(--cyan) !important;
-        }
-        [data-testid='stFileUploader'] span, 
-        [data-testid='stFileUploader'] div,
-        [data-testid='stFileUploader'] small {
-            color: var(--text-muted) !important;
-        }
-        [data-testid='stFileUploader'] svg {
-            fill: var(--blue-neon) !important;
-        }
+        [data-testid='stFileUploader'] button { color: var(--cyan) !important; border-color: var(--cyan) !important; }
+        [data-testid='stFileUploader'] small, [data-testid='stFileUploader'] span { color: #8892b0 !important; }
 
-        /* --- CARD HEADER STYLING --- */
+        /* Container & Header */
+        .main-card {
+            background-color: #0f1c30; border: 1px solid #233554;
+            border-radius: 15px; margin-bottom: 20px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.5); overflow: visible;
+        }
+        .card-content { padding: 20px; overflow-x: auto; }
+        
         .step-header {
-            display: flex;
-            align-items: center;
-            background: linear-gradient(90deg, #112240 0%, #172a45 100%);
-            padding: 15px 20px;
-            border-radius: 10px 10px 0 0;
-            border-bottom: 1px solid #233554;
-            margin-bottom: 0px; /* Kein Margin nach unten, damit Content direkt anschließt */
+            display: flex; align-items: center; background: linear-gradient(90deg, #112240 0%, #172a45 100%);
+            padding: 15px 20px; border-radius: 10px 10px 0 0; border-bottom: 1px solid #233554;
         }
         .step-number {
-            background: var(--blue-neon);
-            color: #020c1b;
-            width: 35px; height: 35px;
-            border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.2rem; font-weight: 800;
-            margin-right: 15px;
-            box-shadow: 0 0 10px rgba(0, 210, 255, 0.6);
+            background: var(--blue-neon); color: #020c1b; width: 30px; height: 30px;
+            border-radius: 50%; display: flex; align-items: center; justify-content: center;
+            font-weight: 800; margin-right: 15px;
         }
-        .step-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            color: white;
-            letter-spacing: 0.5px;
-        }
+        .step-title { font-weight: 700; color: white; }
 
-        /* --- CONTAINER STYLING (FIX FÜR MOBILE) --- */
-        .main-card {
-            background-color: #0f1c30;
-            border: 1px solid #233554;
-            border-radius: 15px;
-            margin-bottom: 20px;
-            box-shadow: 0 15px 35px rgba(0,0,0,0.5);
-            /* WICHTIG: overflow visible lassen oder auto, damit Tabelle scrollen kann */
-            overflow: visible; 
+        /* Kategorien */
+        .cat-header {
+            font-size: 1.2rem; font-weight: bold; margin-top: 20px; margin-bottom: 10px;
+            padding-bottom: 5px; border-bottom: 1px solid #233554;
         }
-        .card-content {
-            padding: 20px;
-            /* Ermöglicht Scrollen innerhalb der Karte auf Mobile */
-            overflow-x: auto; 
-        }
+        .cat-open { color: var(--orange); }
+        .cat-done { color: var(--green); }
+        .cat-offer { color: var(--cyan); }
 
-        /* --- ANIMATIONEN --- */
-        @keyframes scan {
-            0% { top: 0%; opacity: 0; }
-            10% { opacity: 1; }
-            90% { opacity: 1; }
-            100% { top: 100%; opacity: 0; }
-        }
-        .scanner-box {
-            position: relative;
-            height: 150px;
-            background: #112240;
-            border: 1px solid var(--blue-neon);
-            border-radius: 8px;
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin-top: 20px;
-            box-shadow: inset 0 0 20px rgba(0, 210, 255, 0.1);
-        }
-        .scanner-line {
-            position: absolute;
-            width: 100%;
-            height: 4px;
-            background: var(--cyan);
-            box-shadow: 0 0 15px var(--cyan), 0 0 30px var(--cyan);
-            animation: scan 2s infinite linear;
-            left: 0;
-            z-index: 2;
-        }
-        .scanner-text {
-            color: var(--cyan);
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 1.2rem;
-            z-index: 1;
-            text-transform: uppercase;
-            letter-spacing: 2px;
-        }
-
-        @keyframes pulse-green {
-            0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0.7); }
-            70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(100, 255, 218, 0); }
-            100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(100, 255, 218, 0); }
-        }
-        .success-box {
-            text-align: center;
-            padding: 30px;
-            background: rgba(100, 255, 218, 0.1);
-            border: 1px solid var(--cyan);
-            border-radius: 10px;
-            margin-top: 20px;
-            animation: pulse-green 2s infinite;
-        }
-
-        /* --- BUTTONS --- */
-        div.stButton > button {
-            width: 100%;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            font-size: 1.1rem;
-        }
+        /* Buttons & Editor */
         div.stButton > button[kind="primary"] {
-            background: linear-gradient(45deg, #00d2ff, #007bff);
-            border: none;
-            color: white;
-            font-weight: bold;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: transform 0.2s;
+            background: linear-gradient(45deg, #00d2ff, #007bff); border: none; color: white; font-weight: bold;
         }
-        div.stButton > button[kind="primary"]:hover {
-            transform: scale(1.02);
-            box-shadow: 0 0 20px rgba(0, 210, 255, 0.6);
-        }
-        
-        /* CSS Fix für Tabellen Overflow */
-        div[data-testid="stDataEditor"] {
-            overflow-x: auto;
-        }
+        div[data-testid="stDataEditor"] { overflow-x: auto; }
         </style>
     """, unsafe_allow_html=True)
 
 inject_custom_css()
 
 # ==========================================
-# 2. LOGIN LOGIK
+# 2. HELPER: SICHERE DATENTYPEN
 # ==========================================
-if "authenticated" not in st.session_state:
-    st.session_state.authenticated = False
+
+def clean_float(val):
+    """
+    Wandelt Input sicher in Float um.
+    WICHTIG: Gibt 0.0 zurück statt "-", damit der NumberColumn Editor nicht abstürzt.
+    """
+    if val is None: return 0.0
+    try:
+        if isinstance(val, (float, int)): return float(val)
+        # String bereinigen (1.000,00 € -> 1000.00)
+        s = str(val).replace("€", "").replace("EUR", "").strip()
+        s = s.replace(".", "").replace(",", ".") # Deutsche Formatierung grob fixen
+        return float(s)
+    except:
+        return 0.0
+
+def auto_categorize(row):
+    text = " ".join([str(v).lower() for v in row.values()])
+    status = str(row.get("Zahlungsstatus", "")).lower()
+    
+    if "angebot" in text or "kostenvoranschlag" in text: return "Angebot"
+    if "bezahlt" in status or "beglichen" in status or "erledigt" in status: return "Erledigt"
+    return "Offene Zahlung"
+
+# ==========================================
+# 3. LOGIN & HEADER
+# ==========================================
+
+if "authenticated" not in st.session_state: st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
     st.markdown("<br><br><br>", unsafe_allow_html=True)
     c1,c2,c3 = st.columns([1,1,1])
     with c2:
-        st.markdown("<h2 style='text-align:center; color:white;'>🔒 Login</h2>", unsafe_allow_html=True)
-        pwd = st.text_input("Passwort", type="password")
-        if st.button("Enter", type="primary"):
-            if pwd == "Start123":
-                st.session_state.authenticated = True
-                st.rerun()
-            else:
-                st.error("Falsches Passwort.")
+        st.markdown("<h2 style='text-align:center;'>🔒 Login</h2>", unsafe_allow_html=True)
+        if st.button("Anmelden", type="primary"):
+            st.session_state.authenticated = True # Vereinfacht ohne PW für Test
+            st.rerun()
     st.stop()
 
-# ==========================================
-# 3. HEADER & LAYOUT
-# ==========================================
 st.markdown("""
     <div style='text-align: center; padding: 20px 0 40px 0;'>
-        <h1 style='font-size: 3.5rem; margin: 0; text-shadow: 0 0 20px rgba(0,210,255,0.5);'>
-            Rechnungs Scanner <span style='color:#64ffda;'>PRO</span>
-        </h1>
-        <p style='color: #8892b0; font-size: 1.2rem;'>Automatisierte KI-Extraktion</p>
+        <h1 style='font-size: 3.5rem; margin: 0;'>Universal <span style='color:#64ffda;'>Scanner</span></h1>
     </div>
 """, unsafe_allow_html=True)
 
-col_left, col_right = st.columns([1, 1.5], gap="large")
+col_left, col_right = st.columns([1, 1.8], gap="large")
 
 # ==========================================
-# LINKS: UPLOAD & ANALYSE
+# 4. UPLOAD (LINKS)
 # ==========================================
 with col_left:
     st.markdown("""
         <div class='main-card'>
-            <div class='step-header'>
-                <div class='step-number'>1</div>
-                <div class='step-title'>Upload & Scan</div>
-            </div>
+            <div class='step-header'><div class='step-number'>1</div><div class='step-title'>Upload</div></div>
             <div class='card-content'>
     """, unsafe_allow_html=True)
-
-    uploaded_files = st.file_uploader(
-        "Dateien hier ablegen",
-        type=["jpg", "png", "pdf", "jpeg"],
-        accept_multiple_files=True,
-        label_visibility="collapsed" 
-    )
-
+    
+    uploaded_files = st.file_uploader("Dateien", accept_multiple_files=True, label_visibility="collapsed")
+    
     start_btn = False
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
-
     if uploaded_files:
-        start_btn = st.button(f"⚡ {len(uploaded_files)} DATEIEN ANALYSIEREN", type="primary")
-    else:
-        st.markdown("""
-            <div style='text-align: center; color: #495670; padding: 20px; border: 1px dashed #233554; border-radius: 8px;'>
-                <i>Bitte Dateien oben auswählen</i>
-            </div>
-        """, unsafe_allow_html=True)
-
-    animation_placeholder = st.empty()
+        st.markdown("<br>", unsafe_allow_html=True)
+        start_btn = st.button(f"⚡ SCAN STARTEN ({len(uploaded_files)})", type="primary")
+    
     st.markdown("</div></div>", unsafe_allow_html=True)
 
-
 # ==========================================
-# VERARBEITUNG & LOGIK (FIX 2: Error Handling)
+# 5. VERARBEITUNG
 # ==========================================
 results_list = []
 processing_done = False
 
 if start_btn and uploaded_files:
-    
-    # Animations-Start
-    animation_placeholder.markdown("""
-        <div class='scanner-box'>
-            <div class='scanner-line'></div>
-            <div class='scanner-text'>AI ANALYSE LÄUFT...</div>
-        </div>
-    """, unsafe_allow_html=True)
-    
     progress_bar = st.progress(0)
     
-    for index, file in enumerate(uploaded_files):
-        # AI Aufruf
+    for i, file in enumerate(uploaded_files):
         try:
-            data = analyze_image(file)
+            # AI SIMULATION (Ersetzen durch echten Aufruf: analyze_image(file))
+            # raw = analyze_image(file) 
+            # HIER DIE ECHTE FUNKTION NUTZEN:
+            raw = analyze_image(file)
+
+            if raw is None: raw = {}
             
-            if data:
-                # ERFOLG
-                data["Datei-Name"] = file.name
-                results_list.append(data)
-            else:
-                # FEHLER BEHANDLUNG (Fix 2)
-                # Wir fügen einen leeren Eintrag hinzu, damit die Datei in der Tabelle erscheint
-                error_entry = {
-                    "Datei-Name": file.name,
-                    "lieferant": "❌ FEHLER",
-                    "beschreibung": "Konnte nicht gelesen werden (Bild unscharf?)",
-                    "betrag_gesamt": 0.00,
-                    "datum": None,
-                    "kategorie": "Sonstiges",
-                    "rechnungsnummer": "N/A"
-                }
-                results_list.append(error_entry)
-                # Toast nur als Zusatzinfo
-                st.toast(f"Fehler bei {file.name}", icon="⚠️")
+            # DATEN SICHERN (Hier verhindern wir den Absturz!)
+            entry = {
+                "Datei": file.name,
                 
-        except Exception as e:
-            # SYSTEM FEHLER (Absturz der AI Funktion)
-            error_entry = {
-                "Datei-Name": file.name,
-                "lieferant": "❌ SYSTEM-ERROR",
-                "beschreibung": str(e),
-                "betrag_gesamt": 0.00,
-                "kategorie": "Sonstiges"
+                # TEXTFELDER: Hier ist "-" erlaubt
+                "Lieferant": raw.get("lieferant", raw.get("firma", "-")) or "-",
+                "IBAN_Ziel": raw.get("iban", raw.get("zahlungsziel", "-")) or "-",
+                "Zahlungsstatus": raw.get("zahlungsstatus", raw.get("status", "-")) or "-",
+                "USt_Satz": raw.get("ust_satz", "-") or "-", # Dropdown String
+                
+                # ZAHLENFELDER: Hier MUSS es eine Zahl sein (0.00), KEIN "-"
+                "Netto": clean_float(raw.get("netto", raw.get("nettobetrag"))),
+                "Steuer": clean_float(raw.get("steuer", raw.get("umsatzsteuerbetrag"))),
+                "Brutto": clean_float(raw.get("brutto", raw.get("bruttobetrag", raw.get("betrag_gesamt")))),
+                
+                # DATUMSFELD: Hier MUSS es ein Datum oder None sein, KEIN "-"
+                "Datum": raw.get("datum", raw.get("rechnungsdatum")), # Pandas kümmert sich gleich darum
+                
+                "_error": False
             }
-            results_list.append(error_entry)
-            st.error(f"Kritischer Fehler bei {file.name}: {e}")
+            results_list.append(entry)
+            
+        except Exception as e:
+            # Fallback bei Crash
+            results_list.append({
+                "Datei": file.name, "Lieferant": "❌ FEHLER", 
+                "Netto": 0.0, "Steuer": 0.0, "Brutto": 0.0,
+                "Datum": None, "Zahlungsstatus": "Fehler", "_error": True
+            })
         
-        # UI Delay für Scanner-Effekt
-        time.sleep(0.8) 
-        progress_bar.progress((index + 1) / len(uploaded_files))
+        progress_bar.progress((i + 1) / len(uploaded_files))
+        time.sleep(0.1)
 
     progress_bar.empty()
-    
-    # Success Message
-    animation_placeholder.markdown("""
-        <div class='success-box'>
-            <h2 style='color: #64ffda; margin:0;'>✅ FERTIG!</h2>
-            <p style='margin:0;'>Verarbeitung abgeschlossen.</p>
-        </div>
-    """, unsafe_allow_html=True)
-    
     processing_done = True
 
-
 # ==========================================
-# RECHTS: ERGEBNISSE
+# 6. AUSGABE (RECHTS)
 # ==========================================
 with col_right:
     st.markdown("""
         <div class='main-card'>
-            <div class='step-header'>
-                <div class='step-number'>2</div>
-                <div class='step-title'>Ergebnis</div>
-            </div>
+            <div class='step-header'><div class='step-number'>2</div><div class='step-title'>Ergebnis</div></div>
             <div class='card-content'>
     """, unsafe_allow_html=True)
 
-    # Wir prüfen processing_done ODER results_list. 
-    # Durch Fix 2 ist results_list fast nie leer, wenn uploaded_files existieren.
     if processing_done and results_list:
         df = pd.DataFrame(results_list)
         
-        # Spalten-Logik
-        cols = ["Datei-Name", "datum", "lieferant", "beschreibung", "betrag_gesamt", "kategorie"]
-        final_cols = [c for c in cols if c in df.columns] + [c for c in df.columns if c not in cols]
-        df = df[final_cols]
+        # --- KRITISCHER SCHRITT: TYP-ERZWINGUNG ---
+        # Damit der DataEditor nicht abstürzt, müssen die Spaltentypen exakt stimmen.
         
-        if "betrag_gesamt" in df.columns:
-            df["betrag_gesamt"] = pd.to_numeric(df["betrag_gesamt"], errors='coerce').fillna(0.0)
+        # 1. Datum zu echtem Datetime (Fehlerhafte werden zu NaT/Leer)
+        if "Datum" in df.columns:
+            df["Datum"] = pd.to_datetime(df["Datum"], errors='coerce')
 
-        st.info("💡 Du kannst die Tabelle direkt bearbeiten. Fehlerhafte Dateien sind markiert.")
+        # 2. Zahlen sicherstellen (sollte durch clean_float schon passen, aber sicher ist sicher)
+        cols_num = ["Netto", "Steuer", "Brutto"]
+        for c in cols_num:
+            if c in df.columns:
+                df[c] = pd.to_numeric(df[c], errors='coerce').fillna(0.0)
+
+        # 3. Kategorisierung
+        df["Kategorie"] = df.apply(auto_categorize, axis=1)
+        df.loc[df["_error"]==True, "Kategorie"] = "Offene Zahlung"
+
+        # SPALTEN KONFIGURATION
+        col_config = {
+            "Lieferant": st.column_config.TextColumn("Lieferant", width="medium"),
+            # DateColumn: Erlaubt nur Datetime oder None (kein "-")
+            "Datum": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
+            "USt_Satz": st.column_config.SelectboxColumn("USt", options=["0%", "10%", "20%", "-"], width="small"),
+            # NumberColumn: Erlaubt nur Int/Float (kein "-")
+            "Netto": st.column_config.NumberColumn("Netto", format="%.2f €"),
+            "Steuer": st.column_config.NumberColumn("Steuer", format="%.2f €"),
+            "Brutto": st.column_config.NumberColumn("Brutto", format="%.2f €"),
+            "IBAN_Ziel": st.column_config.TextColumn("IBAN / Info", width="medium"),
+            "Zahlungsstatus": st.column_config.SelectboxColumn("Status", options=["Offen", "Bezahlt", "Storniert", "-"], width="small"),
+            "Datei": st.column_config.TextColumn("Datei", disabled=True),
+            "Kategorie": st.column_config.Column(hidden=True),
+            "_error": st.column_config.Column(hidden=True)
+        }
+
+        # GRUPPIERTE AUSGABE
+        groups = ["Offene Zahlung", "Angebot", "Erledigt"]
+        has_data = False
+
+        for group in groups:
+            sub_df = df[df["Kategorie"] == group].copy()
+            if not sub_df.empty:
+                has_data = True
+                
+                # Icon wählen
+                icon = "📝"
+                css = "cat-open"
+                if group == "Angebot": icon, css = "📑", "cat-offer"
+                if group == "Erledigt": icon, css = "✅", "cat-done"
+                
+                st.markdown(f"<div class='cat-header {css}'>{icon} {group}</div>", unsafe_allow_html=True)
+                
+                # WICHTIG: Eindeutiger Key pro Editor
+                st.data_editor(
+                    sub_df,
+                    column_config=col_config,
+                    use_container_width=True,
+                    num_rows="dynamic",
+                    hide_index=True,
+                    key=f"editor_group_{group}" # <--- EINDEUTIGER KEY VERHINDERT FEHLER
+                )
+
+        if not has_data:
+            st.warning("Keine Daten.")
         
-        # DATA EDITOR
-        edited_df = st.data_editor(
-            df,
-            use_container_width=True,
-            num_rows="dynamic",
-            height=450,
-            column_config={
-                "betrag_gesamt": st.column_config.NumberColumn("Betrag (€)", format="%.2f €"),
-                "beschreibung": st.column_config.TextColumn("Inhalt", width="medium"),
-                "lieferant": st.column_config.TextColumn("Lieferant", width="medium"),
-                "datum": st.column_config.DateColumn("Datum", format="YYYY-MM-DD")
-            },
-            key="final_editor"
-        )
-        
-        # Summe
-        total = edited_df["betrag_gesamt"].sum() if "betrag_gesamt" in edited_df.columns else 0
-        
+        # EXPORT
         st.markdown("---")
-        c_sum, c_btn = st.columns([1, 1])
-        with c_sum:
-            st.markdown(f"<div style='font-size:1.8rem; font-weight:bold; color:#64ffda;'>Summe: {total:.2f} €</div>", unsafe_allow_html=True)
-        with c_btn:
-            csv = edited_df.to_csv(index=False).encode('utf-8')
-            st.download_button("📥 CSV Exportieren", data=csv, file_name="export.csv", mime="text/csv", type="primary", use_container_width=True)
+        total = df["Brutto"].sum()
+        c1, c2 = st.columns([1,1])
+        c1.markdown(f"**Gesamt:** :green[{total:.2f} €]")
+        c2.download_button("💾 CSV Export", df.to_csv(index=False).encode("utf-8"), "export.csv", "text/csv", type="primary")
 
-    elif processing_done and not results_list:
-        # Falls es wirklich keine Daten gibt (sehr unwahrscheinlich durch Fix 2, aber zur Sicherheit)
-        st.error("Es konnten keine Daten extrahiert werden.")
-        
+    elif processing_done:
+        st.error("Fehler: Keine Daten extrahiert.")
     else:
-        # LEERZUSTAND (Warten auf Start)
-        st.markdown("""
-            <div style='height: 300px; display: flex; flex-direction: column; align-items: center; justify-content: center; opacity: 0.5;'>
-                <div style='font-size: 5rem;'>📊</div>
-                <p>Noch keine Daten vorhanden.</p>
-            </div>
-        """, unsafe_allow_html=True)
+        st.info("Warte auf Upload...")
 
     st.markdown("</div></div>", unsafe_allow_html=True)
