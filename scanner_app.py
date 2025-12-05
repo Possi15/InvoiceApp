@@ -97,24 +97,13 @@ def auto_categorize(row):
     return "Offene Zahlung"
 
 # ==========================================
-# 3. LOGIN & HEADER
+# 3. HEADER (OHNE LOGIN)
 # ==========================================
-
-if "authenticated" not in st.session_state: st.session_state.authenticated = False
-
-if not st.session_state.authenticated:
-    st.markdown("<br><br><br>", unsafe_allow_html=True)
-    c1,c2,c3 = st.columns([1,1,1])
-    with c2:
-        st.markdown("<h2 style='text-align:center;'>🔒 Login</h2>", unsafe_allow_html=True)
-        if st.button("Anmelden", type="primary"):
-            st.session_state.authenticated = True # Vereinfacht ohne PW für Test
-            st.rerun()
-    st.stop()
 
 st.markdown("""
     <div style='text-align: center; padding: 20px 0 40px 0;'>
         <h1 style='font-size: 3.5rem; margin: 0;'>Universal <span style='color:#64ffda;'>Scanner</span></h1>
+        <p style='color: #8892b0;'>Login deaktiviert – Testmodus</p>
     </div>
 """, unsafe_allow_html=True)
 
@@ -150,9 +139,7 @@ if start_btn and uploaded_files:
     
     for i, file in enumerate(uploaded_files):
         try:
-            # AI SIMULATION (Ersetzen durch echten Aufruf: analyze_image(file))
-            # raw = analyze_image(file) 
-            # HIER DIE ECHTE FUNKTION NUTZEN:
+            # AI ENGINE AUFRUF
             raw = analyze_image(file)
 
             if raw is None: raw = {}
@@ -165,7 +152,7 @@ if start_btn and uploaded_files:
                 "Lieferant": raw.get("lieferant", raw.get("firma", "-")) or "-",
                 "IBAN_Ziel": raw.get("iban", raw.get("zahlungsziel", "-")) or "-",
                 "Zahlungsstatus": raw.get("zahlungsstatus", raw.get("status", "-")) or "-",
-                "USt_Satz": raw.get("ust_satz", "-") or "-", # Dropdown String
+                "USt_Satz": raw.get("ust_satz", "-") or "-", 
                 
                 # ZAHLENFELDER: Hier MUSS es eine Zahl sein (0.00), KEIN "-"
                 "Netto": clean_float(raw.get("netto", raw.get("nettobetrag"))),
@@ -173,7 +160,7 @@ if start_btn and uploaded_files:
                 "Brutto": clean_float(raw.get("brutto", raw.get("bruttobetrag", raw.get("betrag_gesamt")))),
                 
                 # DATUMSFELD: Hier MUSS es ein Datum oder None sein, KEIN "-"
-                "Datum": raw.get("datum", raw.get("rechnungsdatum")), # Pandas kümmert sich gleich darum
+                "Datum": raw.get("datum", raw.get("rechnungsdatum")), 
                 
                 "_error": False
             }
@@ -206,14 +193,13 @@ with col_right:
     if processing_done and results_list:
         df = pd.DataFrame(results_list)
         
-        # --- KRITISCHER SCHRITT: TYP-ERZWINGUNG ---
-        # Damit der DataEditor nicht abstürzt, müssen die Spaltentypen exakt stimmen.
+        # --- TYP-ERZWINGUNG (Verhindert Absturz) ---
         
         # 1. Datum zu echtem Datetime (Fehlerhafte werden zu NaT/Leer)
         if "Datum" in df.columns:
             df["Datum"] = pd.to_datetime(df["Datum"], errors='coerce')
 
-        # 2. Zahlen sicherstellen (sollte durch clean_float schon passen, aber sicher ist sicher)
+        # 2. Zahlen sicherstellen
         cols_num = ["Netto", "Steuer", "Brutto"]
         for c in cols_num:
             if c in df.columns:
@@ -226,10 +212,8 @@ with col_right:
         # SPALTEN KONFIGURATION
         col_config = {
             "Lieferant": st.column_config.TextColumn("Lieferant", width="medium"),
-            # DateColumn: Erlaubt nur Datetime oder None (kein "-")
             "Datum": st.column_config.DateColumn("Datum", format="DD.MM.YYYY"),
             "USt_Satz": st.column_config.SelectboxColumn("USt", options=["0%", "10%", "20%", "-"], width="small"),
-            # NumberColumn: Erlaubt nur Int/Float (kein "-")
             "Netto": st.column_config.NumberColumn("Netto", format="%.2f €"),
             "Steuer": st.column_config.NumberColumn("Steuer", format="%.2f €"),
             "Brutto": st.column_config.NumberColumn("Brutto", format="%.2f €"),
@@ -257,14 +241,13 @@ with col_right:
                 
                 st.markdown(f"<div class='cat-header {css}'>{icon} {group}</div>", unsafe_allow_html=True)
                 
-                # WICHTIG: Eindeutiger Key pro Editor
                 st.data_editor(
                     sub_df,
                     column_config=col_config,
                     use_container_width=True,
                     num_rows="dynamic",
                     hide_index=True,
-                    key=f"editor_group_{group}" # <--- EINDEUTIGER KEY VERHINDERT FEHLER
+                    key=f"editor_group_{group}" 
                 )
 
         if not has_data:
